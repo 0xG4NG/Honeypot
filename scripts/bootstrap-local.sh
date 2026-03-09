@@ -71,10 +71,6 @@ ensure_docker_repo() {
 ensure_tofu_repo() {
   local keyring="/etc/apt/keyrings/opentofu.gpg"
   local repo_file="/etc/apt/sources.list.d/opentofu.list"
-  local distro codename
-
-  distro="$(. /etc/os-release && printf '%s' "${ID}")"
-  codename="$(. /etc/os-release && printf '%s' "${VERSION_CODENAME}")"
 
   ensure_base_packages
 
@@ -90,11 +86,11 @@ ensure_tofu_repo() {
     fi
   fi
 
-  if [[ ! -f "${repo_file}" ]]; then
-    printf 'deb [signed-by=%s] https://packages.opentofu.org/opentofu/tofu/%s/ %s main\n' \
-      "${keyring}" "${distro}" "${codename}" | \
-      if [[ "$(id -u)" -eq 0 ]]; then tee "${repo_file}" >/dev/null; else sudo tee "${repo_file}" >/dev/null; fi
-  fi
+  # OpenTofu publishes a generic apt repo; distro/codename-specific entries can
+  # resolve successfully but still expose no "tofu" package on newer releases.
+  printf 'deb [signed-by=%s] https://packages.opentofu.org/opentofu/tofu/any/ any main\n' \
+    "${keyring}" | \
+    if [[ "$(id -u)" -eq 0 ]]; then tee "${repo_file}" >/dev/null; else sudo tee "${repo_file}" >/dev/null; fi
 
   APT_UPDATED=0
 }
