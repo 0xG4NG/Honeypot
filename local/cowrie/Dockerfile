@@ -15,6 +15,7 @@ WORKDIR /opt/cowrie
 RUN python3 -m venv cowrie-env \
  && ./cowrie-env/bin/pip install --upgrade pip \
  && ./cowrie-env/bin/pip install -r requirements.txt \
+ && ./cowrie-env/bin/pip install -e . \
  && ./cowrie-env/bin/python3 ./bin/regen-dropin.cache
 
 RUN useradd -m -d /opt/cowrie -s /bin/bash cowrie \
