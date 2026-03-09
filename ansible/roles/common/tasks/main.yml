@@ -1,0 +1,69 @@
+---
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ base_packages }}"
+    state: present
+
+- name: Configure timezone
+  community.general.timezone:
+    name: "{{ timezone }}"
+
+- name: Ensure admin group exists
+  ansible.builtin.group:
+    name: "{{ admin_user }}"
+    state: present
+
+- name: Ensure administrative user exists
+  ansible.builtin.user:
+    name: "{{ admin_user }}"
+    shell: /bin/bash
+    groups:
+      - sudo
+    append: true
+    create_home: true
+    state: present
+
+- name: Ensure SSH administrative port is configured
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?Port\\s+"
+    line: "Port {{ admin_ssh_port }}"
+
+- name: Restart SSH service
+  ansible.builtin.systemd:
+    name: ssh
+    state: restarted
+
+- name: Allow SSH with UFW
+  community.general.ufw:
+    rule: allow
+    port: "{{ admin_ssh_port | string }}"
+    proto: tcp
+
+- name: Allow Grafana with UFW
+  community.general.ufw:
+    rule: allow
+    port: "{{ grafana_port | string }}"
+    proto: tcp
+
+- name: Allow Prometheus with UFW
+  community.general.ufw:
+    rule: allow
+    port: "{{ prometheus_port | string }}"
+    proto: tcp
+
+- name: Allow Cowrie honeypot port with UFW
+  community.general.ufw:
+    rule: allow
+    port: "{{ ssh_public_port | string }}"
+    proto: tcp
+
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled
+    policy: deny

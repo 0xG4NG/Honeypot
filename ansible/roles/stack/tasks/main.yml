@@ -1,0 +1,88 @@
+---
+- name: Create stack base directory
+  ansible.builtin.file:
+    path: "{{ stack_base_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Create stack subdirectories
+  ansible.builtin.file:
+    path: "{{ stack_base_dir }}/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - cowrie
+    - cowrie/etc
+    - ingestor
+    - prometheus
+    - grafana/provisioning/datasources
+
+- name: Render stack environment file
+  ansible.builtin.template:
+    src: stack.env.j2
+    dest: "{{ stack_base_dir }}/.env"
+    mode: "0640"
+  notify: Restart stack
+
+- name: Render docker compose definition
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ stack_base_dir }}/docker-compose.yml"
+    mode: "0644"
+  notify: Restart stack
+
+- name: Render Cowrie configuration
+  ansible.builtin.template:
+    src: cowrie.cfg.j2
+    dest: "{{ stack_base_dir }}/cowrie/etc/cowrie.cfg"
+    mode: "0644"
+  notify: Restart stack
+
+- name: Render Prometheus configuration
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: "{{ stack_base_dir }}/prometheus/prometheus.yml"
+    mode: "0644"
+  notify: Restart stack
+
+- name: Render Grafana datasource
+  ansible.builtin.template:
+    src: datasource.yml.j2
+    dest: "{{ stack_base_dir }}/grafana/provisioning/datasources/prometheus.yml"
+    mode: "0644"
+  notify: Restart stack
+
+- name: Render Cowrie Dockerfile
+  ansible.builtin.template:
+    src: cowrie.Dockerfile.j2
+    dest: "{{ stack_base_dir }}/cowrie/Dockerfile"
+    mode: "0644"
+  notify: Restart stack
+
+- name: Render ingestor Dockerfile
+  ansible.builtin.template:
+    src: ingestor.Dockerfile.j2
+    dest: "{{ stack_base_dir }}/ingestor/Dockerfile"
+    mode: "0644"
+  notify: Restart stack
+
+- name: Render ingestor requirements
+  ansible.builtin.copy:
+    dest: "{{ stack_base_dir }}/ingestor/requirements.txt"
+    mode: "0644"
+    content: |
+      psycopg2-binary==2.9.10
+  notify: Restart stack
+
+- name: Render ingestor script
+  ansible.builtin.template:
+    src: attack_ingestor.py.j2
+    dest: "{{ stack_base_dir }}/ingestor/attack_ingestor.py"
+    mode: "0755"
+  notify: Restart stack
+
+- name: Start application stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ stack_base_dir }}"
+    build: always
+    state: present

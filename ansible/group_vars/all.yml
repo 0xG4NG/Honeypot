@@ -1,0 +1,38 @@
+admin_user: adminops
+timezone: Europe/Madrid
+
+base_packages:
+  - acl
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - git
+  - gnupg
+  - htop
+  - jq
+  - python3
+  - rsync
+  - sudo
+  - ufw
+  - unzip
+  - vim
+
+docker_packages:
+  - docker.io
+  - docker-compose-plugin
+
+postgresql_cowrie_db: cowrie
+postgresql_cowrie_user: cowrie
+postgresql_cowrie_password: "{{ postgres_cowrie_password | default('change-me-db') }}"
+
+grafana_admin_user: admin
+grafana_admin_password: "{{ grafana_admin_password | default('change-me-now') }}"
+grafana_port: 3000
+prometheus_port: 9090
+
+stack_base_dir: /opt/honeypot-stack
+admin_ssh_port: 22222
+ssh_public_port: 22
+cowrie_listen_port: 2222
+postgres_exporter_port: 9187
+cadvisor_port: 8080

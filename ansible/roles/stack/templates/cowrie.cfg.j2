@@ -1,0 +1,12 @@
+[honeypot]
+hostname = debian-honeypot
+
+[ssh]
+listen_endpoints = tcp:{{ cowrie_listen_port }}:interface=0.0.0.0
+
+[output_jsonlog]
+enabled = true
+logfile = /opt/cowrie/var/log/cowrie/cowrie.json
+
+[telnet]
+enabled = false

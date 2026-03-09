@@ -1,0 +1,15 @@
+project_name            = "honeypot"
+environment             = "dev"
+location                = "fsn1"
+private_network_zone    = "eu-central"
+network_cidr            = "10.42.0.0/16"
+subnet_cidr             = "10.42.10.0/24"
+ssh_public_key_path     = "~/.ssh/id_ed25519.pub"
+admin_user              = "adminops"
+admin_ssh_port          = 22222
+server_type             = "cx22"
+debian_image            = "debian-12"
+grafana_admin_password  = "change-me-now"
+postgres_password       = "change-me-db"
+hcloud_token            = "replace-me"
+ssh_allowed_cidrs       = ["0.0.0.0/0", "::/0"]

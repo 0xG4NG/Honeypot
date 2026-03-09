@@ -1,0 +1,7 @@
+---
+- name: Restart stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ stack_base_dir }}"
+    build: always
+    state: present
+    recreate: always

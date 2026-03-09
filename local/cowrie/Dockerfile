@@ -1,0 +1,24 @@
+FROM python:3.12-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    libffi-dev \
+    libssl-dev \
+    python3-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt
+RUN git clone https://github.com/cowrie/cowrie.git /opt/cowrie
+
+WORKDIR /opt/cowrie
+RUN python3 -m venv cowrie-env \
+ && ./cowrie-env/bin/pip install --upgrade pip \
+ && ./cowrie-env/bin/pip install -r requirements.txt
+
+RUN useradd -m -d /opt/cowrie -s /bin/bash cowrie \
+ && chown -R cowrie:cowrie /opt/cowrie
+
+USER cowrie
+EXPOSE 2222
+CMD ["./bin/cowrie", "start", "-n"]
