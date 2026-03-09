@@ -3,102 +3,225 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ANSIBLE_DIR="${ROOT_DIR}/ansible"
+BOOTSTRAP_COMPONENTS="${BOOTSTRAP_COMPONENTS:-deploy}"
 
 export DEBIAN_FRONTEND=noninteractive
 
-APT_UPDATED=0
+PKG_CACHE_UPDATED=0
 
 need_cmd() {
   ! command -v "$1" >/dev/null 2>&1
 }
 
-apt_runner() {
+run_as_root() {
   if [[ "$(id -u)" -eq 0 ]]; then
-    apt-get "$@"
+    "$@"
   else
-    sudo apt-get "$@"
+    sudo "$@"
   fi
 }
 
-update_apt_cache() {
-  if [[ "${APT_UPDATED}" -eq 0 ]]; then
-    apt_runner update
-    APT_UPDATED=1
+detect_platform() {
+  if [[ ! -r /etc/os-release ]]; then
+    echo "No se puede detectar el sistema operativo local." >&2
+    exit 1
   fi
+
+  . /etc/os-release
+  OS_ID="${ID}"
+  OS_LIKE="${ID_LIKE:-}"
 }
 
-install_apt_packages() {
-  update_apt_cache
-  apt_runner install -y "$@"
+pkg_install() {
+  case "${PKG_MANAGER}" in
+    apt)
+      run_as_root apt-get install -y "$@"
+      ;;
+    dnf)
+      run_as_root dnf install -y "$@"
+      ;;
+    *)
+      echo "Gestor de paquetes no soportado: ${PKG_MANAGER}" >&2
+      exit 1
+      ;;
+  esac
+}
+
+update_pkg_cache() {
+  if [[ "${PKG_CACHE_UPDATED}" -eq 1 ]]; then
+    return
+  fi
+
+  case "${PKG_MANAGER}" in
+    apt)
+      run_as_root apt-get update
+      ;;
+    dnf)
+      run_as_root dnf makecache
+      ;;
+    *)
+      echo "Gestor de paquetes no soportado: ${PKG_MANAGER}" >&2
+      exit 1
+      ;;
+  esac
+
+  PKG_CACHE_UPDATED=1
 }
 
 ensure_base_packages() {
-  install_apt_packages ca-certificates curl gpg lsb-release
+  update_pkg_cache
+
+  case "${PKG_MANAGER}" in
+    apt)
+      pkg_install ca-certificates curl gpg lsb-release
+      ;;
+    dnf)
+      pkg_install ca-certificates curl dnf-plugins-core gnupg2 tar
+      ;;
+  esac
 }
 
-ensure_docker_repo() {
+ensure_docker_repo_apt() {
   local keyring="/etc/apt/keyrings/docker.asc"
   local repo_file="/etc/apt/sources.list.d/docker.list"
-  local distro codename arch
+  local codename arch
 
-  distro="$(. /etc/os-release && printf '%s' "${ID}")"
   codename="$(. /etc/os-release && printf '%s' "${VERSION_CODENAME}")"
   arch="$(dpkg --print-architecture)"
 
   ensure_base_packages
 
   if [[ ! -f "${keyring}" ]]; then
-    if [[ "$(id -u)" -eq 0 ]]; then
-      install -m 0755 -d /etc/apt/keyrings
-      curl -fsSL "https://download.docker.com/linux/${distro}/gpg" -o "${keyring}"
-      chmod a+r "${keyring}"
-    else
-      sudo install -m 0755 -d /etc/apt/keyrings
-      curl -fsSL "https://download.docker.com/linux/${distro}/gpg" | sudo tee "${keyring}" >/dev/null
-      sudo chmod a+r "${keyring}"
-    fi
+    run_as_root install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL "https://download.docker.com/linux/${OS_ID}/gpg" | run_as_root tee "${keyring}" >/dev/null
+    run_as_root chmod a+r "${keyring}"
   fi
 
   if [[ ! -f "${repo_file}" ]]; then
     printf 'deb [arch=%s signed-by=%s] https://download.docker.com/linux/%s %s stable\n' \
-      "${arch}" "${keyring}" "${distro}" "${codename}" | \
-      if [[ "$(id -u)" -eq 0 ]]; then tee "${repo_file}" >/dev/null; else sudo tee "${repo_file}" >/dev/null; fi
+      "${arch}" "${keyring}" "${OS_ID}" "${codename}" | run_as_root tee "${repo_file}" >/dev/null
   fi
 
-  APT_UPDATED=0
+  PKG_CACHE_UPDATED=0
 }
 
-ensure_tofu_repo() {
+ensure_docker_repo_dnf() {
+  if [[ ! -f /etc/yum.repos.d/docker-ce.repo ]]; then
+    run_as_root dnf config-manager --add-repo "https://download.docker.com/linux/fedora/docker-ce.repo"
+  fi
+
+  PKG_CACHE_UPDATED=0
+}
+
+ensure_tofu_repo_apt() {
   local keyring="/etc/apt/keyrings/opentofu.gpg"
   local repo_file="/etc/apt/sources.list.d/opentofu.list"
 
   ensure_base_packages
 
   if [[ ! -f "${keyring}" ]]; then
-    if [[ "$(id -u)" -eq 0 ]]; then
-      install -m 0755 -d /etc/apt/keyrings
-      curl -fsSL https://packages.opentofu.org/opentofu/tofu/gpgkey | gpg --dearmor -o "${keyring}"
-      chmod a+r "${keyring}"
-    else
-      sudo install -m 0755 -d /etc/apt/keyrings
-      curl -fsSL https://packages.opentofu.org/opentofu/tofu/gpgkey | gpg --dearmor | sudo tee "${keyring}" >/dev/null
-      sudo chmod a+r "${keyring}"
-    fi
+    run_as_root install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://packages.opentofu.org/opentofu/tofu/gpgkey | gpg --dearmor | run_as_root tee "${keyring}" >/dev/null
+    run_as_root chmod a+r "${keyring}"
   fi
 
-  # OpenTofu publishes a generic apt repo; distro/codename-specific entries can
-  # resolve successfully but still expose no "tofu" package on newer releases.
   printf 'deb [signed-by=%s] https://packages.opentofu.org/opentofu/tofu/any/ any main\n' \
-    "${keyring}" | \
-    if [[ "$(id -u)" -eq 0 ]]; then tee "${repo_file}" >/dev/null; else sudo tee "${repo_file}" >/dev/null; fi
+    "${keyring}" | run_as_root tee "${repo_file}" >/dev/null
 
-  APT_UPDATED=0
+  PKG_CACHE_UPDATED=0
 }
 
-if [[ ! -f /etc/debian_version ]]; then
-  echo "bootstrap-local.sh solo soporta Debian/Ubuntu por ahora." >&2
-  exit 1
-fi
+ensure_docker() {
+  if need_cmd docker; then
+    echo "Instalando Docker..."
+    case "${PKG_MANAGER}" in
+      apt)
+        ensure_docker_repo_apt
+        pkg_install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        ;;
+      dnf)
+        ensure_docker_repo_dnf
+        pkg_install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        ;;
+    esac
+  fi
+
+  if ! docker compose version >/dev/null 2>&1; then
+    echo "Instalando plugin Docker Compose..."
+    case "${PKG_MANAGER}" in
+      apt)
+        ensure_docker_repo_apt
+        pkg_install docker-compose-plugin
+        ;;
+      dnf)
+        ensure_docker_repo_dnf
+        pkg_install docker-compose-plugin
+        ;;
+    esac
+  fi
+
+  if command -v systemctl >/dev/null 2>&1; then
+    run_as_root systemctl enable --now docker >/dev/null 2>&1 || true
+  fi
+}
+
+ensure_ansible() {
+  if need_cmd ansible-playbook || need_cmd ansible-galaxy; then
+    echo "Instalando Ansible..."
+    case "${PKG_MANAGER}" in
+      apt)
+        pkg_install ansible
+        ;;
+      dnf)
+        pkg_install ansible-core
+        ;;
+    esac
+  fi
+}
+
+ensure_tofu() {
+  if [[ "${PKG_MANAGER}" != "apt" ]]; then
+    echo "La instalacion automatica de OpenTofu solo esta soportada en Debian/Ubuntu por ahora." >&2
+    exit 1
+  fi
+
+  if need_cmd tofu; then
+    echo "Instalando OpenTofu..."
+    ensure_tofu_repo_apt
+    pkg_install tofu
+  fi
+}
+
+install_ansible_collections() {
+  echo "Instalando colecciones de Ansible..."
+  (
+    cd "${ANSIBLE_DIR}"
+    ANSIBLE_LOCAL_TEMP=/tmp/ansible-local \
+    ANSIBLE_REMOTE_TEMP=/tmp/ansible-remote \
+    ansible-galaxy collection install -r requirements.yml >/dev/null
+  )
+}
+
+detect_platform
+
+case "${OS_ID}" in
+  debian|ubuntu)
+    PKG_MANAGER="apt"
+    ;;
+  fedora)
+    PKG_MANAGER="dnf"
+    ;;
+  *)
+    if [[ "${OS_LIKE}" == *debian* ]]; then
+      PKG_MANAGER="apt"
+    elif [[ "${OS_LIKE}" == *fedora* ]] || [[ "${OS_LIKE}" == *rhel* ]]; then
+      PKG_MANAGER="dnf"
+    else
+      echo "Sistema operativo no soportado: ${OS_ID}" >&2
+      exit 1
+    fi
+    ;;
+esac
 
 if need_cmd sudo && [[ "$(id -u)" -ne 0 ]]; then
   echo "Falta el comando requerido: sudo" >&2
@@ -107,35 +230,25 @@ fi
 
 ensure_base_packages
 
-if need_cmd ansible-playbook || need_cmd ansible-galaxy; then
-  echo "Instalando Ansible..."
-  install_apt_packages ansible
-fi
-
-if need_cmd docker; then
-  echo "Instalando Docker..."
-  ensure_docker_repo
-  install_apt_packages docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-fi
-
-if ! docker compose version >/dev/null 2>&1; then
-  echo "Instalando plugin Docker Compose..."
-  ensure_docker_repo
-  install_apt_packages docker-compose-plugin
-fi
-
-if need_cmd tofu; then
-  echo "Instalando OpenTofu..."
-  ensure_tofu_repo
-  install_apt_packages tofu
-fi
-
-echo "Instalando colecciones de Ansible..."
-(
-  cd "${ANSIBLE_DIR}"
-  ANSIBLE_LOCAL_TEMP=/tmp/ansible-local \
-  ANSIBLE_REMOTE_TEMP=/tmp/ansible-remote \
-  ansible-galaxy collection install -r requirements.yml >/dev/null
-)
+case "${BOOTSTRAP_COMPONENTS}" in
+  local)
+    ensure_docker
+    ;;
+  check)
+    ensure_ansible
+    ensure_docker
+    install_ansible_collections
+    ;;
+  deploy)
+    ensure_ansible
+    ensure_docker
+    ensure_tofu
+    install_ansible_collections
+    ;;
+  *)
+    echo "BOOTSTRAP_COMPONENTS no soportado: ${BOOTSTRAP_COMPONENTS}" >&2
+    exit 1
+    ;;
+esac
 
 echo "Dependencias locales listas."

@@ -22,4 +22,4 @@ RUN useradd -m -d /opt/cowrie -s /bin/bash cowrie \
 
 USER cowrie
 EXPOSE 2222
-CMD ["./cowrie-env/bin/cowrie", "start", "-n"]
+CMD ["./cowrie-env/bin/cowrie", "start"]

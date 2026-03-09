@@ -30,7 +30,8 @@ Servicios incluidos:
 
 - Token de Hetzner Cloud
 - Clave SSH local disponible (`id_ed25519` por defecto)
-- Debian/Ubuntu local con `sudo` para auto-instalar dependencias
+- Debian/Ubuntu local con `sudo` para despliegue completo
+- Fedora local con `sudo` para pruebas Docker del stack local
 
 Las dependencias locales (`tofu`, `ansible`, colecciones de Ansible y Docker para pruebas/checks) se instalan automáticamente desde los scripts.
 
@@ -108,6 +109,14 @@ Para levantar el stack en local con Docker:
 ```bash
 ./scripts/test-local.sh
 ```
+
+Si quieres evitar `git clone` y `git pull`, puedes lanzar siempre la ultima version de `main` con una sola linea:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/0xG4NG/Honeypot/main/scripts/run-local-latest.sh | bash
+```
+
+Ese comando descarga un snapshot temporal del repositorio y ejecuta `scripts/test-local.sh`.
 
 Para apagarlo y borrar volúmenes:
 

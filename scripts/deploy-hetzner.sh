@@ -33,7 +33,7 @@ prompt_secret() {
   printf '%s\n' "${reply}"
 }
 
-bash "${BOOTSTRAP_SCRIPT}"
+BOOTSTRAP_COMPONENTS=deploy bash "${BOOTSTRAP_SCRIPT}"
 
 require_cmd tofu
 require_cmd ansible-galaxy
