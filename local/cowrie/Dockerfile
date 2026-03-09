@@ -15,11 +15,14 @@ WORKDIR /opt/cowrie
 RUN python3 -m venv cowrie-env \
  && ./cowrie-env/bin/pip install --upgrade pip \
  && ./cowrie-env/bin/pip install -r requirements.txt \
- && ./cowrie-env/bin/pip install .
+ && ./cowrie-env/bin/python3 ./bin/regen-dropin.cache
 
 RUN useradd -m -d /opt/cowrie -s /bin/bash cowrie \
  && chown -R cowrie:cowrie /opt/cowrie
 
 USER cowrie
+ENV PATH=/opt/cowrie/cowrie-env/bin:${PATH}
+ENV PYTHONPATH=/opt/cowrie/src
+ENV PYTHONUNBUFFERED=1
 EXPOSE 2222
-CMD ["./cowrie-env/bin/cowrie", "start"]
+CMD ["./cowrie-env/bin/twistd", "-n", "--umask=0022", "--pidfile=", "cowrie"]
