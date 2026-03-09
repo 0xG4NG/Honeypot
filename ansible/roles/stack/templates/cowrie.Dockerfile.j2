@@ -14,11 +14,12 @@ RUN git clone https://github.com/cowrie/cowrie.git /opt/cowrie
 WORKDIR /opt/cowrie
 RUN python3 -m venv cowrie-env \
  && ./cowrie-env/bin/pip install --upgrade pip \
- && ./cowrie-env/bin/pip install -r requirements.txt
+ && ./cowrie-env/bin/pip install -r requirements.txt \
+ && ./cowrie-env/bin/pip install .
 
 RUN useradd -m -d /opt/cowrie -s /bin/bash cowrie \
  && chown -R cowrie:cowrie /opt/cowrie
 
 USER cowrie
 EXPOSE {{ cowrie_listen_port }}
-CMD ["./bin/cowrie", "start", "-n"]
+CMD ["./cowrie-env/bin/cowrie", "start", "-n"]
