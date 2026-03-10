@@ -1,0 +1,373 @@
+{
+  "__inputs": [],
+  "__elements": {},
+  "__requires": [
+    { "type": "datasource", "id": "postgres", "name": "PostgreSQL", "version": "1.0.0" },
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" },
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0" },
+    { "type": "panel", "id": "stat", "name": "Stat", "version": "" },
+    { "type": "panel", "id": "timeseries", "name": "Time series", "version": "" },
+    { "type": "panel", "id": "table", "name": "Table", "version": "" },
+    { "type": "panel", "id": "barchart", "name": "Bar chart", "version": "" },
+    { "type": "panel", "id": "piechart", "name": "Pie chart", "version": "" }
+  ],
+  "annotations": { "list": [] },
+  "description": "Visión general de ataques al Honeypot SSH (Cowrie)",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "📊 Resumen de Ataques",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgresql" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 100 },
+              { "color": "red", "value": 1000 }
+            ]
+          },
+          "unit": "short",
+          "mappings": []
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "id": 1,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "center" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgresql" },
+          "rawSql": "SELECT COUNT(*) FROM cowrie_events WHERE created_at >= NOW() - INTERVAL '24 hours'",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "title": "Ataques últimas 24h",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgresql" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 50 },
+              { "color": "red", "value": 500 }
+            ]
+          },
+          "unit": "short",
+          "mappings": []
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "id": 2,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "center" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgresql" },
+          "rawSql": "SELECT COUNT(DISTINCT src_ip) FROM cowrie_events WHERE created_at >= NOW() - INTERVAL '24 hours'",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "title": "IPs únicas (24h)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgresql" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          },
+          "unit": "short",
+          "mappings": []
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "id": 3,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "center" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgresql" },
+          "rawSql": "SELECT COUNT(*) FROM cowrie_events WHERE eventid = 'cowrie.login.failed' AND created_at >= NOW() - INTERVAL '24 hours'",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "title": "Intentos de login fallidos (24h)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgresql" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null }
+            ]
+          },
+          "unit": "short",
+          "mappings": []
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "id": 4,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none", "justifyMode": "center" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgresql" },
+          "rawSql": "SELECT COUNT(*) FROM cowrie_events WHERE eventid = 'cowrie.login.success' AND created_at >= NOW() - INTERVAL '24 hours'",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "title": "Logins exitosos (24h)",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 101,
+      "title": "📈 Actividad en el Tiempo",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgresql" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 15, "gradientMode": "opacity", "spanNulls": false }
+        }
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 },
+      "id": 10,
+      "options": { "tooltip": { "mode": "multi", "sort": "desc" }, "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgresql" },
+          "rawSql": "SELECT\n  date_trunc('hour', created_at) AS time,\n  COUNT(*) AS \"Intentos totales\"\nFROM cowrie_events\nWHERE\n  $__timeFilter(created_at)\nGROUP BY 1\nORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "postgres", "uid": "postgresql" },
+          "rawSql": "SELECT\n  date_trunc('hour', created_at) AS time,\n  COUNT(*) AS \"Login fallidos\"\nFROM cowrie_events\nWHERE\n  $__timeFilter(created_at)\n  AND eventid = 'cowrie.login.failed'\nGROUP BY 1\nORDER BY 1",
+          "format": "time_series",
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "postgres", "uid": "postgresql" },
+          "rawSql": "SELECT\n  date_trunc('hour', created_at) AS time,\n  COUNT(*) AS \"Sesiones abiertas\"\nFROM cowrie_events\nWHERE\n  $__timeFilter(created_at)\n  AND eventid = 'cowrie.session.connect'\nGROUP BY 1\nORDER BY 1",
+          "format": "time_series",
+          "refId": "C"
+        }
+      ],
+      "title": "Eventos por hora",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+      "id": 102,
+      "title": "🎯 Top Atacantes y Credenciales",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgresql" },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "left" } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Ataques" }, "properties": [{ "id": "custom.width", "value": 90 }, { "id": "custom.displayMode", "value": "color-background" }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "yellow", "value": null }, { "color": "red", "value": 100 }] } }] }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 8, "x": 0, "y": 15 },
+      "id": 20,
+      "options": { "sortBy": [{ "displayName": "Ataques", "desc": true }] },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgresql" },
+          "rawSql": "SELECT\n  src_ip AS \"IP\",\n  COUNT(*) AS \"Ataques\",\n  COUNT(DISTINCT date_trunc('hour', created_at)) AS \"Horas activo\"\nFROM cowrie_events\nWHERE $__timeFilter(created_at)\nGROUP BY src_ip\nORDER BY \"Ataques\" DESC\nLIMIT 20",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "title": "Top 20 IPs atacantes",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgresql" },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "left" } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Intentos" }, "properties": [{ "id": "custom.width", "value": 90 }, { "id": "custom.displayMode", "value": "color-background" }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }, { "color": "red", "value": 200 }] } }] }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 8, "x": 8, "y": 15 },
+      "id": 21,
+      "options": { "sortBy": [{ "displayName": "Intentos", "desc": true }] },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgresql" },
+          "rawSql": "SELECT\n  username AS \"Usuario\",\n  COUNT(*) AS \"Intentos\"\nFROM cowrie_events\nWHERE $__timeFilter(created_at)\n  AND username IS NOT NULL\nGROUP BY username\nORDER BY \"Intentos\" DESC\nLIMIT 20",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "title": "Top 20 usuarios probados",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgresql" },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "left" } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Intentos" }, "properties": [{ "id": "custom.width", "value": 90 }, { "id": "custom.displayMode", "value": "color-background" }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "purple", "value": null }, { "color": "red", "value": 200 }] } }] }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 8, "x": 16, "y": 15 },
+      "id": 22,
+      "options": { "sortBy": [{ "displayName": "Intentos", "desc": true }] },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgresql" },
+          "rawSql": "SELECT\n  password AS \"Contraseña\",\n  COUNT(*) AS \"Intentos\"\nFROM cowrie_events\nWHERE $__timeFilter(created_at)\n  AND password IS NOT NULL\nGROUP BY password\nORDER BY \"Intentos\" DESC\nLIMIT 20",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "title": "Top 20 passwords probadas",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 },
+      "id": 103,
+      "title": "🔍 Tipos de Eventos y Comandos",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgresql" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" } }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
+      "id": 30,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "pieType": "donut", "tooltip": { "mode": "single" }, "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] } },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgresql" },
+          "rawSql": "SELECT\n  eventid AS \"Evento\",\n  COUNT(*) AS \"Total\"\nFROM cowrie_events\nWHERE $__timeFilter(created_at)\nGROUP BY eventid\nORDER BY \"Total\" DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "title": "Distribución de tipos de evento",
+      "type": "piechart"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgresql" },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "left" } }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 26 },
+      "id": 31,
+      "options": { "sortBy": [{ "displayName": "Ejecuciones", "desc": true }] },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgresql" },
+          "rawSql": "SELECT\n  payload->>'input' AS \"Comando\",\n  COUNT(*) AS \"Ejecuciones\"\nFROM cowrie_events\nWHERE $__timeFilter(created_at)\n  AND eventid = 'cowrie.command.input'\n  AND payload->>'input' IS NOT NULL\nGROUP BY payload->>'input'\nORDER BY \"Ejecuciones\" DESC\nLIMIT 25",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "title": "Top 25 comandos ejecutados por atacantes",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 },
+      "id": 104,
+      "title": "🖥️ Estado del Stack (Prometheus / cAdvisor)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 1, "fillOpacity": 10 },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 35 },
+      "id": 40,
+      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(container_cpu_usage_seconds_total{name!=\"\"}[$__rate_interval])) by (name)",
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "CPU por contenedor",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 1, "fillOpacity": 10 },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 35 },
+      "id": 41,
+      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "container_memory_usage_bytes{name!=\"\"}",
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "RAM por contenedor",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["honeypot", "cowrie", "security"],
+  "templating": { "list": [] },
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Honeypot Overview",
+  "uid": "honeypot-overview",
+  "version": 1,
+  "weekStart": ""
+}

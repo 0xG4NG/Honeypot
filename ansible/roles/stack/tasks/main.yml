@@ -16,6 +16,7 @@
     - ingestor
     - prometheus
     - grafana/provisioning/datasources
+    - grafana/provisioning/dashboards
 
 - name: Render stack environment file
   ansible.builtin.template:
@@ -48,7 +49,21 @@
 - name: Render Grafana datasource
   ansible.builtin.template:
     src: datasource.yml.j2
-    dest: "{{ stack_base_dir }}/grafana/provisioning/datasources/prometheus.yml"
+    dest: "{{ stack_base_dir }}/grafana/provisioning/datasources/datasources.yml"
+    mode: "0644"
+  notify: Restart stack
+
+- name: Render Grafana dashboard provider config
+  ansible.builtin.template:
+    src: dashboards.yml.j2
+    dest: "{{ stack_base_dir }}/grafana/provisioning/dashboards/dashboards.yml"
+    mode: "0644"
+  notify: Restart stack
+
+- name: Render Grafana honeypot dashboard
+  ansible.builtin.template:
+    src: honeypot_overview.json.j2
+    dest: "{{ stack_base_dir }}/grafana/provisioning/dashboards/honeypot_overview.json"
     mode: "0644"
   notify: Restart stack
 
